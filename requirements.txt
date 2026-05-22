@@ -7,3 +7,4 @@ openai
 python-dotenv
 PyPDF2==3.0.1
 azure-storage-blob==12.19.0
+fpdf2

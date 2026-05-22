@@ -441,32 +441,24 @@
         <!-- ════════════════ TAB: RELATÓRIOS ════════════════ -->
         <div id="tab-reports" class="tab-content">
             <div class="max-w-2xl">
-                <h2 class="font-heading font-bold text-lg mb-4">Relatórios Semanais</h2>
-                <p class="text-sm text-slate-500 mb-6">
-                    Relatórios em PDF gerados automaticamente com as melhores oportunidades da semana. Esta
-                    funcionalidade será gerida pelas Azure Functions e Blob Storage.
-                </p>
-
-                <div class="card-elevated rounded-xl p-4 flex items-center justify-between border border-slate-200 bg-white mb-3">
-                    <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 rounded bg-red-50 text-red-500 flex items-center justify-center">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z">
-                                </path>
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="font-semibold text-sm text-slate-900">Oportunidades - Semana 16 de Abril</p>
-                            <p class="text-xs text-slate-500">Gerado há 2 horas • 1.2 MB</p>
-                        </div>
-                    </div>
-                    <button class="text-sm font-medium px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors">
-                        Descarregar
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="font-heading font-bold text-lg">Relatórios de Oportunidades</h2>
+                    <button id="btn-gerar-relatorio" onclick="gerarRelatorio()" class="px-4 py-2 text-white text-sm font-bold rounded-lg shadow-sm transition-colors flex items-center gap-2" style="background-color: hsl(var(--primary));">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Gerar Relatório de Hoje
                     </button>
                 </div>
+                <p class="text-sm text-slate-500 mb-6">
+                    Gera um relatório em PDF com as tuas melhores oportunidades de acordo com a IA. O ficheiro ficará guardado com segurança na nuvem (Azure Blob Storage).
+                </p>
+
+                <div id="lista-relatorios" class="flex flex-col gap-3">
+                    <div id="estado-vazio-relatorios" class="text-center py-8 text-slate-500 border border-dashed border-slate-300 rounded-xl bg-white">
+                        <p class="text-sm">Ainda não geraste nenhum relatório.</p>
+                    </div>
+                </div>
             </div>
-        </div>
+        </div>  
         <!-- ════════════════ FIM TAB RELATÓRIOS ════════════════ -->
 
     </div>
@@ -616,6 +608,62 @@
                 document.getElementById('estado-loading').classList.add('hidden');
                 document.getElementById('estado-erro').classList.remove('hidden');
                 document.getElementById('texto-erro').textContent = err.message || 'Tenta novamente mais tarde.';
+            }
+        }
+
+        // ════════════════════════════════
+        // Gerar Relatório PDF
+        // ════════════════════════════════
+        async function gerarRelatorio() {
+            const btn = document.getElementById('btn-gerar-relatorio');
+            const lista = document.getElementById('lista-relatorios');
+            const msgVazio = document.getElementById('estado-vazio-relatorios');
+
+            // Mudar o botão para estado de "A carregar"
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = `<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> A gerar PDF...`;
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+
+            try {
+                // Chama a rota que tu criaste no app.py
+                const res = await fetch('/api/gerar-relatorio', { method: 'POST' });
+                const dados = await res.json();
+
+                if (!res.ok) throw new Error(dados.erro || 'Erro ao gerar relatório');
+
+                // Esconder a mensagem de "vazio"
+                if (msgVazio) msgVazio.style.display = 'none';
+
+                // Criar o cartão visual do novo relatório gerado
+                const card = document.createElement('div');
+                card.className = 'card-elevated rounded-xl p-4 flex items-center justify-between border border-slate-200 bg-white mb-3';
+                card.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 rounded bg-red-50 text-red-500 flex items-center justify-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-sm text-slate-900">Relatório de Oportunidades (IA)</p>
+                            <p class="text-xs text-slate-500">Gerado agora mesmo • Azure Blob Storage</p>
+                        </div>
+                    </div>
+                    <a href="/api/relatorios/download/${dados.ficheiro}" target="_blank" class="text-sm font-medium px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors">
+                        Descarregar PDF
+                    </a>
+                `;
+                
+                // Adiciona o novo relatório no topo da lista
+                lista.insertBefore(card, lista.firstChild);
+                alert("Sucesso! Relatório PDF gerado e guardado no Azure Storage.");
+
+            } catch (err) {
+                alert("Erro: " + err.message);
+            } finally {
+                // Restaurar o botão ao normal
+                btn.innerHTML = textoOriginal;
+                btn.disabled = false;
+                btn.style.opacity = '1';
             }
         }
 
